@@ -4,7 +4,7 @@ YAML-in, Word-out. Define document content in a simple YAML schema and docsmith 
 
 ## Why docsmith?
 
-docsmith is built for **automated pipelines and LLM-driven content generation**. The YAML input format is deliberately simple -- flat, predictable, and easy for any language model or script to produce. No template engine, no programming required. Hand it a YAML file, get a Word document back.
+docsmith is built for **automated pipelines and LLM-driven content generation**. The YAML input format is deliberately simple -- flat, predictable, and easy for any language model or script to produce. No template engine, no programming required. Hand it a YAML file (or pipe it via stdin), get a Word document back.
 
 Use cases:
 
@@ -28,12 +28,20 @@ pip install docsmith
 ## Usage
 
 ```bash
-# Generate a Word document from a YAML source
+# Generate a Word document from a YAML file
 docsmith input.yaml
 
 # Specify output directory
 docsmith input.yaml -o output/
+
+# Pipe YAML from stdin
+cat input.yaml | docsmith -
+
+# Pipe directly from an LLM
+llm "write a project status report in docsmith YAML format" | docsmith -
 ```
+
+When reading from stdin (`-`), the output file is `docsmith_output.docx` in the current directory. Use `-o` to override the output directory.
 
 Also works as a Python module:
 
@@ -89,6 +97,21 @@ docsmith sets SharePoint/OneDrive-compatible document properties:
 - `dc:creator` and `cp:lastModifiedBy` set to "docsmith"
 - `dcterms:created` and `dcterms:modified` set to generation timestamp
 - `dc:title` and `dc:subject` populated from YAML metadata
+
+## Development
+
+```bash
+git clone https://github.com/dawsonlp/docsmith.git
+cd docsmith
+uv venv .venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# Install pre-commit hooks (ruff format + lint)
+pre-commit install
+```
+
+CI runs ruff lint/format checks and pytest on every push and PR. Releases to PyPI are automated via GitHub Actions trusted publishing on tagged releases.
 
 ## Future Output Formats
 

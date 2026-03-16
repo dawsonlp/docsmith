@@ -1,6 +1,6 @@
 [project]
 name = "docsmith"
-version = "0.1.1"
+version = "0.1.2"
 description = "YAML-to-Word document generator for automated pipelines and LLM-driven content creation"
 authors = [{name = "Development Team"}]
 readme = "README.md"

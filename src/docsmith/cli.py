@@ -178,8 +178,32 @@ def render(yaml_path, output_path):
     doc.save(str(output_path))
 
 
+HELP_EPILOG = """\
+YAML format:
+  title:    "Document Title"        # optional metadata
+  subtitle: "Subtitle"
+  status:   "Draft"
+  content:                          # list of blocks:
+    - heading: "Section"            #   heading (level: 1-4)
+    - text: "Paragraph **bold**"    #   paragraph with **bold**/*italic*
+    - bullets: ["Item 1","Item 2"]  #   unordered list
+    - numbered: ["Step 1","Step 2"] #   ordered list
+    - table:                        #   table with headers + rows
+        headers: ["A", "B"]
+        rows: [["1","2"]]
+    - decision: "Needs review"      #   red decision callout
+
+Full docs: https://pypi.org/project/docsmith/
+Source:    https://github.com/dawsonlp/docsmith
+"""
+
+
 def main():
-    parser = argparse.ArgumentParser(description="YAML to Word document generator")
+    parser = argparse.ArgumentParser(
+        description="docsmith -- YAML-to-Word document generator for automated pipelines and LLMs",
+        epilog=HELP_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("input", help="Path to YAML document file")
     parser.add_argument("--output", "-o", help="Output directory (default: same as input)", default=None)
     args = parser.parse_args()

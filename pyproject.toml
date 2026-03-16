@@ -1,13 +1,13 @@
 [project]
 name = "docsmith"
-version = "0.1.2"
+version = "1.0.0"
 description = "YAML-to-Word document generator for automated pipelines and LLM-driven content creation"
 authors = [{name = "Development Team"}]
 readme = "README.md"
 requires-python = ">=3.13"
 license = "GPL-3.0-or-later"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

@@ -21,43 +21,17 @@ from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor
+from docx.shared import Inches, Pt, RGBColor
+
+from docsmith.normalize import normalize_heading_block, normalize_image_block
 
 APP_NAME = "docsmith"
 
-
-def normalize_heading_block(block: dict) -> tuple[str, int]:
-    """Extract and validate heading text and level from a raw YAML block.
-
-    Accepts both flat form (heading: "text") and nested dict form
-    (heading: {text: "text", level: 2}). Returns (text, level) with
-    level clamped to 1-4.
-
-    Raises ValueError for invalid input with user-facing messages.
-    """
-    value = block["heading"]
-
-    if isinstance(value, str):
-        text = value
-        level = block.get("level", 1)
-    elif isinstance(value, dict):
-        if "text" not in value:
-            raise ValueError(
-                "Heading block nested form requires a 'text' key, "
-                'e.g.: heading: {text: "Section Title", level: 2}'
-            )
-        text = value["text"]
-        if not isinstance(text, str) or not text.strip():
-            raise ValueError("Heading block 'text' must be a non-empty string")
-        level = value.get("level", 1)
-    else:
-        raise ValueError(
-            f"Heading block value must be a string or a dict with a 'text' key, "
-            f"got {type(value).__name__}"
-        )
-
-    level = max(1, min(int(level), 4))
-    return text, level
+_alignment_map = {
+    "left": WD_ALIGN_PARAGRAPH.LEFT,
+    "center": WD_ALIGN_PARAGRAPH.CENTER,
+    "right": WD_ALIGN_PARAGRAPH.RIGHT,
+}
 
 
 def add_formatted_text(paragraph, text):
@@ -107,12 +81,14 @@ def _set_compatibility_mode(doc):
     compat.append(compat_setting)
 
 
-def render(doc_data, output_path):
+def render(doc_data, output_path, base_path=None):
     """Render parsed YAML document data to Word.
 
     Args:
         doc_data: Dictionary from parsed YAML.
         output_path: Path to write the .docx file.
+        base_path: Base directory for resolving relative image paths.
+            Required when the document contains image blocks.
     """
     doc = Document()
 
@@ -195,6 +171,25 @@ def render(doc_data, output_path):
             run.font.size = Pt(11)
             p.add_run(str(block["decision"]))
 
+        elif "image" in block:
+            if base_path is None:
+                raise ValueError(
+                    "Image blocks require a base path for resolving relative "
+                    "image paths. This is a programming error -- base_path "
+                    "should be passed to render()."
+                )
+            img = normalize_image_block(block, base_path)
+            width = Inches(img.width) if img.width is not None else Inches(5.0)
+            doc.add_picture(str(img.path), width=width)
+            last_paragraph = doc.paragraphs[-1]
+            last_paragraph.alignment = _alignment_map[img.alignment]
+            if img.caption:
+                caption_para = doc.add_paragraph()
+                caption_para.alignment = last_paragraph.alignment
+                run = caption_para.add_run(img.caption)
+                run.italic = True
+                run.font.size = Pt(9)
+
     doc.save(str(output_path))
 
 
@@ -218,6 +213,11 @@ YAML format:
         headers: ["A", "B"]
         rows: [["1","2"]]
     - decision: "Needs review"      #   red decision callout
+    - image:                        #   embedded image (PNG/JPEG)
+        path: "diagram.png"         #     file path (relative to YAML file)
+        width: 5.0                  #     optional width in inches
+        alignment: center           #     optional: left, center, right
+        caption: "Figure 1"         #     optional caption text
 
 Full docs: https://pypi.org/project/docsmith/
 Source:    https://github.com/dawsonlp/docsmith
@@ -250,6 +250,7 @@ def main():
             sys.exit(1)
         doc_data = yaml.safe_load(raw)
         default_output_dir = Path.cwd()
+        base_path = Path.cwd()
         output_name = "docsmith_output.docx"
     else:
         input_path = Path(args.input).resolve()
@@ -259,6 +260,7 @@ def main():
         with open(input_path, encoding="utf-8") as f:
             doc_data = yaml.safe_load(f)
         default_output_dir = input_path.parent
+        base_path = input_path.parent
         output_name = (
             input_path.stem.replace("_", " ").title().replace(" ", "_") + ".docx"
         )
@@ -271,7 +273,7 @@ def main():
 
     output_path = output_dir / output_name
 
-    render(doc_data, output_path)
+    render(doc_data, output_path, base_path=base_path)
     print(f"Generated: {output_path}")
 
 

@@ -3,7 +3,7 @@
 **Issue:** [#2](https://github.com/dawsonlp/docsmith/issues/2)
 **Priority:** Critical
 **Type:** Bug fix
-**Status:** Approved
+**Status:** Complete -- Implemented in v1.1.0
 
 ---
 

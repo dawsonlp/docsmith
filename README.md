@@ -76,6 +76,12 @@ content:
         - ["Cell 1", "Cell 2"]
         - ["Cell 3", "Cell 4"]
 
+  - image:
+      path: "diagram.png"
+      width: 4.0
+      alignment: center
+      caption: "Figure 1: System architecture"
+
   - decision: "A decision callout that needs stakeholder input"
 ```
 
@@ -88,7 +94,17 @@ content:
 | `bullets` | Unordered list |
 | `numbered` | Ordered list |
 | `table` | Table with headers and rows |
+| `image` | Embedded PNG/JPEG image |
 | `decision` | Red decision callout |
+
+### Image Block Options
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `path` | Yes | -- | File path relative to the YAML file, or absolute |
+| `width` | No | 5.0 | Width in inches (aspect ratio preserved) |
+| `alignment` | No | `left` | `left`, `center`, or `right` |
+| `caption` | No | -- | Caption text displayed below the image in italic |
 
 ## Document Metadata
 

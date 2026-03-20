@@ -1,6 +1,6 @@
 [project]
 name = "docsmith"
-version = "1.0.1"
+version = "1.1.0"
 description = "YAML-to-Word document generator for automated pipelines and LLM-driven content creation"
 authors = [{name = "Development Team"}]
 readme = "README.md"
@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pillow",
     "pre-commit",
     "pytest",
     "ruff",

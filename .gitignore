@@ -24,3 +24,10 @@ Thumbs.db
 
 # Environment
 .env
+
+# Generated artifacts
+*.docx
+~$*
+example_diagram.png
+.pytest_cache/
+.ruff_cache/

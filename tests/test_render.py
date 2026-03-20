@@ -1,108 +1,49 @@
-"""Tests for docsmith rendering and block normalization."""
+"""Integration tests for docsmith rendering.
+
+These tests call render() and inspect the generated .docx files.
+Domain-level normalization tests are in test_normalize.py.
+"""
 
 import pytest
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt
 
-from docsmith.cli import normalize_heading_block, render
+from docsmith.cli import render
 
 # ---------------------------------------------------------------------------
-# Domain tests: normalize_heading_block
+# Test image fixtures (generated via Pillow for python-docx compatibility)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "block, expected",
-    [
-        pytest.param(
-            {"heading": "Title", "level": 2},
-            ("Title", 2),
-            id="flat-with-level",
-        ),
-        pytest.param(
-            {"heading": "Title"},
-            ("Title", 1),
-            id="flat-default-level",
-        ),
-        pytest.param(
-            {"heading": {"text": "Title", "level": 3}},
-            ("Title", 3),
-            id="nested-with-level",
-        ),
-        pytest.param(
-            {"heading": {"text": "Title"}},
-            ("Title", 1),
-            id="nested-default-level",
-        ),
-        pytest.param(
-            {"heading": "Title", "level": 9},
-            ("Title", 4),
-            id="level-clamped-high",
-        ),
-        pytest.param(
-            {"heading": "Title", "level": 0},
-            ("Title", 1),
-            id="level-clamped-low",
-        ),
-        pytest.param(
-            {"heading": {"text": "Title", "level": 99}},
-            ("Title", 4),
-            id="nested-level-clamped-high",
-        ),
-        pytest.param(
-            {"heading": {"text": "Title", "level": -5}},
-            ("Title", 1),
-            id="nested-level-clamped-low",
-        ),
-    ],
-)
-def test_normalize_heading_block_valid(block, expected):
-    """Valid heading blocks produce correct (text, level) tuples."""
-    assert normalize_heading_block(block) == expected
+def _make_image_bytes(fmt):
+    """Generate minimal valid image bytes using Pillow."""
+    import io
+
+    from PIL import Image as PILImage
+
+    img = PILImage.new("RGB", (1, 1), color="red")
+    buf = io.BytesIO()
+    img.save(buf, format=fmt)
+    return buf.getvalue()
 
 
-@pytest.mark.parametrize(
-    "block, match",
-    [
-        pytest.param(
-            {"heading": {"level": 2}},
-            "requires a 'text' key",
-            id="nested-missing-text",
-        ),
-        pytest.param(
-            {"heading": {"text": "", "level": 2}},
-            "non-empty string",
-            id="nested-empty-text",
-        ),
-        pytest.param(
-            {"heading": {"text": "   "}},
-            "non-empty string",
-            id="nested-whitespace-text",
-        ),
-        pytest.param(
-            {"heading": ["a", "b"]},
-            "got list",
-            id="heading-is-list",
-        ),
-        pytest.param(
-            {"heading": 42},
-            "got int",
-            id="heading-is-int",
-        ),
-        pytest.param(
-            {"heading": None},
-            "got NoneType",
-            id="heading-is-none",
-        ),
-    ],
-)
-def test_normalize_heading_block_invalid(block, match):
-    """Invalid heading blocks raise ValueError with actionable messages."""
-    with pytest.raises(ValueError, match=match):
-        normalize_heading_block(block)
+@pytest.fixture()
+def png_file(tmp_path):
+    p = tmp_path / "test.png"
+    p.write_bytes(_make_image_bytes("PNG"))
+    return p
+
+
+@pytest.fixture()
+def jpeg_file(tmp_path):
+    p = tmp_path / "test.jpg"
+    p.write_bytes(_make_image_bytes("JPEG"))
+    return p
 
 
 # ---------------------------------------------------------------------------
-# Integration tests: render path for headings
+# Integration tests: heading rendering (kept from original)
 # ---------------------------------------------------------------------------
 
 
@@ -172,3 +113,131 @@ def test_render_minimal(tmp_path):
     render(doc_data, output_path)
     assert output_path.exists()
     assert output_path.stat().st_size > 0
+
+
+# ---------------------------------------------------------------------------
+# Integration tests: image rendering
+# ---------------------------------------------------------------------------
+
+
+def test_render_png_image(tmp_path, png_file):
+    """PNG image renders in the generated document."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    assert len(doc.inline_shapes) == 1
+
+
+def test_render_jpeg_image(tmp_path, jpeg_file):
+    """JPEG image renders in the generated document."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.jpg"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    assert len(doc.inline_shapes) == 1
+
+
+def test_render_image_with_caption(tmp_path, png_file):
+    """Image with caption produces caption paragraph with italic text."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png", "caption": "Figure 1: Architecture"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    # Find caption paragraph -- it follows the image paragraph
+    paragraphs = doc.paragraphs
+    caption_para = paragraphs[-1]
+    assert caption_para.text == "Figure 1: Architecture"
+    assert caption_para.runs[0].italic is True
+    assert caption_para.runs[0].font.size == Pt(9)
+
+
+def test_render_image_center_alignment(tmp_path, png_file):
+    """Image with center alignment sets paragraph alignment."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png", "alignment": "center"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    # The image paragraph is the last one (no caption)
+    image_para = doc.paragraphs[-1]
+    assert image_para.alignment == WD_ALIGN_PARAGRAPH.CENTER
+
+
+def test_render_image_with_width(tmp_path, png_file):
+    """Image with explicit width sets inline shape width."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png", "width": 3.0}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    shape = doc.inline_shapes[0]
+    # Compare with tolerance (EMU rounding for tiny source images)
+    assert abs(shape.width - Inches(3.0)) < Inches(0.05)
+
+
+def test_render_image_default_width(tmp_path, png_file):
+    """Image without width gets default width of 5 inches."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    shape = doc.inline_shapes[0]
+    assert abs(shape.width - Inches(5.0)) < Inches(0.01)
+
+
+def test_render_image_default_alignment_is_left(tmp_path, png_file):
+    """Image without alignment defaults to left."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "test.png"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    render(doc_data, output_path, base_path=tmp_path)
+
+    doc = Document(output_path)
+    image_para = doc.paragraphs[-1]
+    # Left alignment may be None (Word default) or explicit LEFT
+    assert image_para.alignment in (None, WD_ALIGN_PARAGRAPH.LEFT)
+
+
+def test_render_missing_image_does_not_produce_file(tmp_path):
+    """Missing image raises ValueError before producing output file."""
+    doc_data = {
+        "content": [
+            {"image": {"path": "nonexistent.png"}},
+        ],
+    }
+    output_path = tmp_path / "output.docx"
+    with pytest.raises(ValueError, match="not found"):
+        render(doc_data, output_path, base_path=tmp_path)
+    assert not output_path.exists()

@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), and this pro
 
 ---
 
+## [1.1.1] -- 2026-03-20
+
+### Fixed
+
+- Publish workflow now triggers on tag push instead of requiring a manual GitHub Release
+- Fixed `gh release create` command syntax in publish workflow
+- CLI `--help` now clearly shows both heading forms and explains that level is optional (defaults to 1)
+
+### Changed
+
+- GitHub Actions updated to `actions/checkout@v6` and `astral-sh/setup-uv@v7` (Node.js 24 native, resolves deprecation warnings)
+
+---
+
 ## [1.1.0] -- 2026-03-20
 
 ### Added
@@ -37,7 +51,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), and this pro
 
 ---
 
-## [1.0.1] -- 2025-03-20
+## [1.0.1] -- 2026-03-20
 
 ### Fixed
 
@@ -49,7 +63,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/), and this pro
 
 ---
 
-## [1.0.0] -- 2025-03-20
+## [1.0.0] -- 2026-03-16
 
 ### Added
 

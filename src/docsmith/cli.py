@@ -26,6 +26,40 @@ from docx.shared import Pt, RGBColor
 APP_NAME = "docsmith"
 
 
+def normalize_heading_block(block: dict) -> tuple[str, int]:
+    """Extract and validate heading text and level from a raw YAML block.
+
+    Accepts both flat form (heading: "text") and nested dict form
+    (heading: {text: "text", level: 2}). Returns (text, level) with
+    level clamped to 1-4.
+
+    Raises ValueError for invalid input with user-facing messages.
+    """
+    value = block["heading"]
+
+    if isinstance(value, str):
+        text = value
+        level = block.get("level", 1)
+    elif isinstance(value, dict):
+        if "text" not in value:
+            raise ValueError(
+                "Heading block nested form requires a 'text' key, "
+                'e.g.: heading: {text: "Section Title", level: 2}'
+            )
+        text = value["text"]
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError("Heading block 'text' must be a non-empty string")
+        level = value.get("level", 1)
+    else:
+        raise ValueError(
+            f"Heading block value must be a string or a dict with a 'text' key, "
+            f"got {type(value).__name__}"
+        )
+
+    level = max(1, min(int(level), 4))
+    return text, level
+
+
 def add_formatted_text(paragraph, text):
     """Add text with inline bold (**) and italic (*) support."""
     parts = re.split(r"(\*\*[^*]+\*\*|\*[^*]+\*)", str(text))
@@ -112,8 +146,8 @@ def render(doc_data, output_path):
 
     for block in doc_data.get("content", []):
         if "heading" in block:
-            level = block.get("level", 1)
-            doc.add_heading(block["heading"], level=min(level, 4))
+            text, level = normalize_heading_block(block)
+            doc.add_heading(text, level=level)
 
         elif "text" in block:
             p = doc.add_paragraph()

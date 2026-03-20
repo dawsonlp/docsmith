@@ -205,7 +205,12 @@ YAML format:
   subtitle: "Subtitle"
   status:   "Draft"
   content:                          # list of blocks:
-    - heading: "Section"            #   heading (level: 1-4)
+    - heading: "Section"            #   heading at level 1 (default)
+    - heading: "Section"            #   heading at level 2
+      level: 2                      #     (level is optional, 1-4)
+    - heading:                      #   dict form (same result):
+        text: "Subsection"
+        level: 3
     - text: "Paragraph **bold**"    #   paragraph with **bold**/*italic*
     - bullets: ["Item 1","Item 2"]  #   unordered list
     - numbered: ["Step 1","Step 2"] #   ordered list
